@@ -2,36 +2,110 @@ from django.db import models
 
 from model_utils.managers import InheritanceManager
 
+from django.utils.translation import ugettext_lazy as _
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator
 # Create your models here.
+
+class CategoryManager(models.Manager):
+	def new_category(self, category):
+		new_category = self.create(category=re.sub('\s+', '-', category).lower())
+
+		new_category.save()
+		return new_category
+
+
+class Category(models.Model):
+
+	category = models.CharField(
+		verbose_name=_('Category'),
+		blank=False, null=False,
+		unique=True, max_length=250)
+
+	objects = CategoryManager()
+
+	class Meta:
+		verbose_name=_('Category')
+		verbose_name_plural=_('Categories')
+
+
+	def __str__(self):
+		return self.category
+
+
+class SubCategory(models.Model):
+	sub_category = models.CharField(
+		verbose_name=_('Sub-Category'),
+		blank=False, null=False,
+		max_length=250)
+
+	category = models.ForeignKey(Category,
+		blank=False, null=False,
+		verbose_name=_('Category'),
+		on_delete=models.CASCADE)
+
+	objects = CategoryManager()
+
+	class Meta:
+		verbose_name=_('Sub-Category')
+		verbose_name_plural=_('Sub-Categories')
+
+	def __str__(self):
+		return self.sub_category + "(" + self.category.category + ")"
+
+class DifficultyManager(models.Manager):
+ 	pass
+
+
+class Difficulty(models.Model):
+
+	difficulty = models.CharField(
+		verbose_name=_('Difficulty'),
+		blank=False, null=False,
+		max_length=100
+		)
+
+	objects = DifficultyManager()
+
+	class Meta:
+		verbose_name=_('Difficulty level')
+
+
+	def __str__(self):
+		return self.difficulty
+
+
 class Quiz(models.Model):
 
 	title = models.CharField(
-		verbose_name=('Title'),
+		verbose_name=_('Title'),
+		default=_("Title of the quiz"),
 		max_length=60, blank=False)
 
 	description = models.TextField(
-		verbose_name=('Description'),
-		blank=True, help_text=('a description of the quiz'))
+		verbose_name=_('Description'),
+		blank=True, help_text=_('a description of the quiz'))
 
 	url = models.SlugField(
 		max_length=60, blank=False,
-		verbose_name=('user friendly url'),
-		help_text=('a user friendly url'))
+		default=_("slug-is-used-as-a-url"),
+		verbose_name=_('user friendly url'),
+		help_text=_('a user friendly url'))
 
 	category = models.ForeignKey(
 		Category, null=True, blank=True,
-		verbose_name=('Category'), on_delete=models.CASCADE)
+		verbose_name=_('Category'), on_delete=models.CASCADE)
 
 	random_order = models.BooleanField(
 		default=False, blank=False,
-		verbose_name=('Random Order'),
+		verbose_name=_('Random Order'),
 		help_text=_("Display the questions in "
                     "a random order or as they "
                     "are set?"))
 
 	max_questions = models.PositiveIntegerField(
 		default=10, blank=True,
-		verbose_name=('Max Questions'),
+		verbose_name=_('Max Questions'),
 		help_text=_("Number of questions to be answered on each attempt."))
 
 	answers_at_end = models.BooleanField(
@@ -91,8 +165,8 @@ class Quiz(models.Model):
 		super(Quiz, self).save(force_insert, force_update, *args, **kwargs)
 
 	class Meta:
-		verbose_name=('Quiz')
-		verbose_name_plural=('Quizzes')
+		verbose_name=_('Quiz')
+		verbose_name_plural=_('Quizzes')
 
 
 	def __str__(self):
@@ -118,73 +192,6 @@ class Quiz(models.Model):
 		return str(self.id)+'_q_data'
 	
 
-class CategoryManager(models.Manager):
-	def new_category(self, category):
-		new_category = self.create(category=re.sub('\s+', '-', category).lower())
-
-		new_category.save()
-		return new_category
-
-
-class Category(models.Model):
-
-	category = models.CharField(
-		verbose_name=('Category'),
-		blank=False, null=False,
-		unique=True, max_length=250)
-
-	objects = CategoryManager()
-
-	class Meta:
-		verbose_name=('Category')
-		verbose_name_plural=('Categories')
-
-
-	def __str__(self):
-		return self.category
-
-
-class SubCategory(models.Model):
-	sub_category = models.CharField(
-		verbose_name=('Sub-Category'),
-		blank=False, null=False,
-		max_length=250)
-
-	category = models.ForeignKey(Category,
-		blank=False, null=False,
-		verbose_name=('Category'),
-		on_delete=models.CASCADE)
-
-	objects = CategoryManager()
-
-	class Meta:
-		verbose_name=('Sub-Category')
-		verbose_name_plural=('Sub-Categories')
-
-	def __str__(self):
-		return self.sub_category + "(" + self.category.category + ")"
-
-class DifficultyManager(models.Manager):
- 	pass
-
-
-class Difficulty(models.Model):
-
-	difficulty = models.CharField(
-		verbose_name=('Difficulty'),
-		blank=False, null=False,
-		max_length=100
-		)
-
-	objects = DifficultyManager()
-
-	class Meta:
-		verbose_name=('Difficulty')
-
-
-	def __str__(self):
-		return self.difficulty
-
 class Question(models.Model):
 	"""
     Base class for all question types.
@@ -192,42 +199,42 @@ class Question(models.Model):
     """
 
 	quiz = models.ManyToManyField(Quiz, 
-									verbose_name=('Quiz'),
-									blank=True,)
+								  verbose_name=_('Quiz'),
+								  blank=True,)
 
 	category = models.ForeignKey(Category,
 								 blank=False,
 								 null=False,
-								 verbose_name=('Category'),
+								 verbose_name=_('Category'),
 								 on_delete=models.CASCADE)
 
 	sub_category = models.ForeignKey(SubCategory,
 									 blank=False,
 									 null=False,
-									 verbose_name=('Sub-Category'),
+									 verbose_name=_('Sub-Category'),
 									 on_delete=models.CASCADE)
 
 	difficulty = models.ForeignKey(Difficulty,
 									blank=False,
 									null=False,
-									verbose_name=('Difficulty'),
+									verbose_name=_('Difficulty'),
 									on_delete=models.CASCADE)
 
 	question_content = models.TextField(max_length=1000,
 										blank=False,
-										help_text=("Enter your question text"),
-										verbose_name=('Question'))
+										help_text=_("Enter your question text"),
+										verbose_name=_('Question'))
 
 	explanation = models.TextField(max_length=2000,
 									blank=True,
-									help_text=("Explanation to be shown"),
-									verbose_name=('Explanation'))
+									help_text=_("Explanation to be shown"),
+									verbose_name=_('Explanation'))
 
 	objects = InheritanceManager()
 
 	class Meta:
-		verbose_name = ('Question')
-		verbose_name_plural = ('Questions')
+		verbose_name = _('Question')
+		verbose_name_plural = _('Questions')
 		ordering = ['category']
 
 
